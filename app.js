@@ -94,7 +94,8 @@ app.get("/files", (req, res) => {
     const fileContents = files.map((file) => {
       const filePath = path.join(saveDir, file);
       const content = fs.readFileSync(filePath, "utf-8");
-      return { fileName: file, content: JSON.parse(content) };
+      const foo = JSON.parse(content)
+      return foo;
     });
 
     res.json(fileContents);
