@@ -1,14 +1,21 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.get("/", (req, res) => res.type('html').send(html));
+// Middleware to parse JSON requests
+app.use(express.json());
 
-const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+// Directory to save files
+const saveDir = path.join(__dirname, "data");
 
-server.keepAliveTimeout = 120 * 1000;
-server.headersTimeout = 120 * 1000;
+// Ensure the directory exists
+if (!fs.existsSync(saveDir)) {
+  fs.mkdirSync(saveDir);
+}
 
+// HTML for the main route
 const html = `
 <!DOCTYPE html>
 <html>
@@ -58,4 +65,47 @@ const html = `
     </section>
   </body>
 </html>
-`
+`;
+
+// Routes
+app.get("/", (req, res) => res.type("html").send(html));
+
+// POST endpoint to save JSON data to a file
+app.post("/save", (req, res) => {
+  const fileName = `file_${Date.now()}.json`;
+  const filePath = path.join(saveDir, fileName);
+
+  fs.writeFile(filePath, JSON.stringify(req.body, null, 2), (err) => {
+    if (err) {
+      console.error("Error saving file:", err);
+      return res.status(500).json({ message: "Failed to save file" });
+    }
+    res.json({ message: "File saved successfully", fileName });
+  });
+});
+
+// GET endpoint to list all files and their contents
+app.get("/files", (req, res) => {
+  fs.readdir(saveDir, (err, files) => {
+    if (err) {
+      console.error("Error reading files:", err);
+      return res.status(500).json({ message: "Failed to read files" });
+    }
+
+    const fileContents = files.map((file) => {
+      const filePath = path.join(saveDir, file);
+      const content = fs.readFileSync(filePath, "utf-8");
+      return { fileName: file, content: JSON.parse(content) };
+    });
+
+    res.json(fileContents);
+  });
+});
+
+// Start the server
+const server = app.listen(port, () =>
+  console.log(`Example app listening on port ${port}!`)
+);
+
+server.keepAliveTimeout = 120 * 1000;
+server.headersTimeout = 120 * 1000;
